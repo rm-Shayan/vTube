@@ -17,9 +17,9 @@ const storage = multer.diskStorage({
     let folderPath;
 
     if (file.mimetype.startsWith("image/")) {
-      folderPath = path.join(publicPath, "images", "Temp");
+      folderPath = path.join(publicPath,"Temp" , "images");
     } else if (file.mimetype.startsWith("video/")) {
-      folderPath = path.join(publicPath, "videos", "Temp");
+      folderPath = path.join(publicPath, "Temp", "videos");
     } else {
       return cb(new ApiError(400, "Only images and videos are allowed"), false);
     }
