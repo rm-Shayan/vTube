@@ -7,16 +7,17 @@
 <body>
   <h2>Login User (Testing)</h2>
 
-  <form action="/Api/v1/user/login" method="POST">
-    <label>Email or Username:</label>
-    <input type="text" name="identifier" placeholder="Enter email or username" required>
+  <form action="/api/v1/user/login" method="POST">
+    <label for="text">Email or Username:</label>
+    <input type="text" name="text" id="text" placeholder="Enter email or username" required>
     <br><br>
 
-    <label>Password:</label>
-    <input type="password" name="password" placeholder="Enter password" required>
+    <label for="password">Password:</label>
+    <input type="password" name="password" id="password" placeholder="Enter password" required>
     <br><br>
 
     <button type="submit">Login</button>
   </form>
+  <button style="padding: 8px; margin-top: 2rem;"> <a href="/api/v1/user/logout">logout</a></button>
 </body>
 </html>

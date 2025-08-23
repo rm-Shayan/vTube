@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { registerUser, loginUser,logoutUser } from "../controllers/user.controller.js";
-import { fileUploadHandler } from "../middlewares/fileUpload.middleware.js";
+import { registerUser, loginUser,logoutUser } from "../Controlers/user.controller.js";
+import { fileUploadHandler } from "../Middlewares/fileUpload.middleware.js";
 import { jwtVerify } from "../Middlewares/JWTverify.middleware.js";
 
 const router = Router();

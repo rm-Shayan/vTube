@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRoute from "./Routes/user.route.js";
 import { ApiErrorMiddleware } from "./Middlewares/ApiError.middleware.js";
+import refreshRouter from "./Routes/refresh.route.js";
 
 export const app = express();
 
@@ -24,6 +25,12 @@ app.use("/api/v1/user", userRoute);
 app.get("/",(req,res)=>{
 res.render('index')
 })
+
+app.use("/api/v1/token",refreshRouter)
+app.get("/register",(req,res)=>{
+res.render('register')
+})
+
 
 // Error handling middleware (must be last)
 app.use(ApiErrorMiddleware);

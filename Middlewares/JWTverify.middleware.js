@@ -20,7 +20,7 @@ try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     // Attach user to request (optional: fetch full user from DB)
-    req.user = await User.findById(decoded._id).select("-password -RefreshToken");
+    req.user = await User.findById(decoded.id).select("-password -RefreshToken");
 
     if (!req.user) {
       throw new ApiError(401, "Unauthorized: User not found");

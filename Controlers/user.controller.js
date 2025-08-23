@@ -128,10 +128,8 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Username/Email and password are required");
   }
 
-  // 👇 Fix query (field is userName, not username)
   const query = text.includes("@") ? { email: text } : { userName: text };
-  const user = await User.findOne(query);
-
+  const user = await User.findOne(query).select("+password");
   if (!user) {
     throw new ApiError(401, "Invalid credentials");
   }
@@ -143,15 +141,17 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id);
 
+
+
   const userObj = user.toObject();
   delete userObj.password;
-  delete userObj.RefreshToken; // 👈 same as schema
+  delete userObj.refreshToken; // remove from response
 
   const userAgent = req.headers["user-agent"]?.toLowerCase() || "";
   const isMobile = /mobile|android|iphone|ipad|ipod/i.test(userAgent);
 
   if (isMobile) {
-    // 👉 Mobile: return tokens in body
+    // Mobile: return tokens in body
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -162,16 +162,18 @@ export const loginUser = asyncHandler(async (req, res) => {
       },
     });
   } else {
-    // 👉 Web: set tokens in cookies
+    // Web: set tokens in cookies
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: false, // local dev: false, production: true
+      sameSite: "lax", // local dev: 'lax', production: 'strict'
       maxAge: 7 * 24 * 60 * 60 * 1000,
     };
 
     res.cookie("accessToken", accessToken, cookieOptions);
     res.cookie("refreshToken", refreshToken, cookieOptions);
+
+console.log(accessToken,cookieOptions,refreshToken,cookieOptions)
 
     return res.status(200).json({
       success: true,
@@ -182,21 +184,21 @@ export const loginUser = asyncHandler(async (req, res) => {
 });
 
 
-export const logoutUser = async (req, res) => {
+export const logoutUser = asyncHandler(async (req, res) => {
   try {
     // DB se refresh token remove kar do
-    await User.findByIdAndUpdate(req.user._id, { $unset: { refreshToken: 1 } });
+await User.findByIdAndUpdate(req.user._id, { $unset: { RefreshToken: 1 } });
 
     // Cookies clear kardo
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
     });
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
     });
 
     return res.status(200).json({
@@ -209,4 +211,4 @@ export const logoutUser = async (req, res) => {
       message: "Logout failed",
     });
   }
-};
+});
