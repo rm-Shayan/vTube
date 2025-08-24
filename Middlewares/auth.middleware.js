@@ -3,7 +3,7 @@ import { asyncHandler } from "../Utils/asyncHandler.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { User } from "../Models/User.model.js";
 
-export const jwtVerify = asyncHandler(async (req, res, next) => {
+export const jwtVerify = asyncHandler(async (req, _, next) => {
     // 👉 Web (cookie se token lena)
 
 const token = req.cookies?.accessToken 
@@ -19,8 +19,9 @@ try {
     // Verify token
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
+    
     // Attach user to request (optional: fetch full user from DB)
-    req.user = await User.findById(decoded.id).select("-password -RefreshToken");
+    req.user = await User.findById(decoded._id).select("-password -RefreshToken");
 
     if (!req.user) {
       throw new ApiError(401, "Unauthorized: User not found");

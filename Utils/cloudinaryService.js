@@ -54,3 +54,20 @@ export const uploadToCloudinary = async (localFile) => {
     throw error;
   }
 };
+
+
+export const deleteFromCloudinary = async (publicId, resourceType = "image") => {
+  if (!publicId) throw new Error("Public ID not provided for deletion");
+
+  try {
+    const result = await Cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType, // "image" or "video"
+    });
+
+    console.log("Delete Successful:", result);
+    return result;
+  } catch (error) {
+    console.error("Delete Error:", error);
+    throw error;
+  }
+};

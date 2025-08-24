@@ -24,18 +24,18 @@ const userSchema = new mongoose.Schema(
       minlength: [3, "Name must not be less than 3 characters"],
     },
 
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-      unique: true,
-      index: true,
-      match: [
-        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-        "Please provide a valid email",
-      ],
-    },
+   email: {
+  type: String,
+  required: true,
+  trim: true,
+  lowercase: true,
+  unique: true,
+  index: true,
+  match: [
+    /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+    "Please provide a valid email",
+  ],
+},
 
     password: {
       type: String,
@@ -51,28 +51,41 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+  
     avatar: {
-      type: String,
-      required: true,
-      default: "https://cdn-icons-png.flaticon.com/512/847/847969.png",
-    },
-    coverImage: {
-      type: String,
-      required: true,
-    },
-    followers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+  url: {
+    type: String,
+    required: true,
+    default: "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+  },
+  public_id: {
+    type: String, // Cloudinary/S3 ke liye unique ID
+    default: null,
+  }
+},
 
-    following: [
+coverImage: {
+  url: {
+    type: String,
+    required: true,
+    default: "",
+  },
+  public_id: {
+    type: String,
+    default: null,
+  }
+},
+
+    followers: 
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+      type:Number,
+      default:0,
       },
-    ],
+
+    following:{
+      type:Number,
+      default:0,
+      },
 
     isVerified: {
       type: Boolean,
@@ -85,7 +98,7 @@ const userSchema = new mongoose.Schema(
         ref: "Video",
       },
     ],
-    RefreshToken: {
+    refreshToken: {
       type: String,
       select: false, // for security
       default: null, // required: false rakha
@@ -119,7 +132,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 //
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
-    { id: this._id, email: this.email, userName: this.userName },
+    { _id: this._id, email: this.email, userName: this.userName },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn:process.env.EXPIRE_ACCESS_TOKEN } // 15 minutes
   );
@@ -130,7 +143,7 @@ userSchema.methods.generateAccessToken = function () {
 //
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
-    { id: this._id, email: this.email, userName: this.userName },
+    { _id: this._id, email: this.email, userName: this.userName },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: process.env.EXPIRE_REFRESH_TOKEN } // 7 days
   );
