@@ -9,9 +9,9 @@ import {
   updateUserName,
   updateCoverImage,
   updateFullName,
-  getUser
+  getUser,
 } from "../Controlers/user.controller.js";
-import { fileUploadHandler } from "../Middlewares/fileUpload.middleware.js";
+import { fileUploadHandler, uploadUserMedia} from "../Middlewares/fileUpload.middleware.js";
 import { jwtVerify } from "../Middlewares/auth.middleware.js";
 
 const router = Router();
@@ -19,10 +19,7 @@ const router = Router();
 // Register route with file upload support
 router.post(
   "/register",
-  fileUploadHandler.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "coverImage", maxCount: 1 }
-  ]),
+  uploadUserMedia,
   registerUser
 );
 
@@ -30,14 +27,25 @@ router.post(
 router.post("/login", loginUser);
 
 // Secure routes
-router.post("/logout", jwtVerify, logoutUser); // changed to POST
+router.get("/logout", jwtVerify, logoutUser); // changed to POST
 router.get("/", jwtVerify, getUser);
 
 router.post("/update/userName", jwtVerify, updateUserName);
 router.post("/update/fullName", jwtVerify, updateFullName); // <-- Ensure you create this in controller
 router.post("/update/bio", jwtVerify, updateBio);
 router.post("/update/password", jwtVerify, updatePassword);
-router.post("/update/avatar", jwtVerify, updateAvatar);
-router.post("/update/coverImage", jwtVerify, updateCoverImage);
+
+router.post(
+  "/update/avatar",
+  jwtVerify,
+  fileUploadHandler.single("avatar"),
+  updateAvatar
+);
+router.post(
+  "/update/coverImage",
+  jwtVerify,
+  fileUploadHandler.single("coverImage"),
+  updateCoverImage
+);
 
 export default router;

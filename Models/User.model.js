@@ -76,17 +76,6 @@ coverImage: {
   }
 },
 
-    followers: 
-      {
-      type:Number,
-      default:0,
-      },
-
-    following:{
-      type:Number,
-      default:0,
-      },
-
     isVerified: {
       type: Boolean,
       default: false,

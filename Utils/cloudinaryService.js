@@ -1,6 +1,6 @@
 import { v2 as Cloudinary } from "cloudinary";
 import path from "path";
-import fs from "fs";
+import fs from "fs/promises"; // use promises for async/await
 
 // Cloudinary Config
 Cloudinary.config({
@@ -9,53 +9,70 @@ Cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET_KEY,
 });
 
+/**
+ * Upload a local file to Cloudinary
+ * @param {string} localFile - Path to the local file
+ * @returns {Object} - { url, public_id, type }
+ */
 export const uploadToCloudinary = async (localFile) => {
   if (!localFile) throw new Error("File path not defined. Unable to find file.");
 
-  try {
-    // Check file extension
-    const ext = path.extname(localFile).toLowerCase();
-    let folderName = "";
+  const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+  const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".ogg"];
 
-    if ([".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext)) {
-      folderName = "vTube/images"; // images folder
-    } else if ([".mp4", ".mov", ".avi", ".mkv"].includes(ext)) {
-      folderName = "vTube/videos"; // videos folder
+  try {
+    // Determine file type and folder
+    const ext = path.extname(localFile).toLowerCase();
+    let folderName, type;
+
+    if (imageExtensions.includes(ext)) {
+      folderName = "vTube/images";
+      type = "image";
+    } else if (videoExtensions.includes(ext)) {
+      folderName = "vTube/videos";
+      type = "video";
     } else {
-      throw new Error("Unsupported file type");
+      throw new Error("Unsupported file type: " + ext);
     }
 
     // Upload to Cloudinary
     const result = await Cloudinary.uploader.upload(localFile, {
       folder: folderName,
-      resource_type: "auto", // auto detect image/video
+      resource_type: "auto", // automatically detect image/video
     });
 
     console.log("Upload Successful:", result);
 
     // Delete local temp file after successful upload
-    fs.unlink(localFile, (err) => {
-      if (err) console.error("Failed to delete temp file:", err);
+    await fs.unlink(localFile).catch((err) => {
+      console.error("Failed to delete temp file:", err);
     });
 
-    return  {
+   return {
   url: result.secure_url,
   public_id: result.public_id,
+  type,          // "video" ya "image"
+  duration: result.duration // Cloudinary automatically provide karti hai video ke liye
 };
+
   } catch (error) {
     console.error("Upload Error:", error);
 
-
-    // Cleanup if upload fails
-    fs.unlink(localFile, (err) => {
-      if (err) console.error("Failed to delete temp file:", err);
+    // Cleanup local file on error
+    await fs.unlink(localFile).catch((err) => {
+      console.error("Failed to delete temp file after error:", err);
     });
 
     throw error;
   }
 };
 
-
+/**
+ * Delete a file from Cloudinary
+ * @param {string} publicId - Cloudinary public ID
+ * @param {string} resourceType - "image" or "video"
+ * @returns {Object} - Cloudinary delete result
+ */
 export const deleteFromCloudinary = async (publicId, resourceType = "image") => {
   if (!publicId) throw new Error("Public ID not provided for deletion");
 

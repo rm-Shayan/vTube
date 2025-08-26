@@ -13,15 +13,37 @@ const videoSchema = new mongoose.Schema(
       required: [true, "Video description is required"],
     },
     thumbnail: {
-      type: String, // URL
-      required: true,
+      url: {
+        type: String, // URL of thumbnail
+        required: true,
+      },
+      type: {
+        type: String, // "image"
+        required: true,
+        enum: ["image"], // thumbnail will always be an image
+      },
+      public_id: {
+        type: String, // Cloudinary public_id
+        required: true,
+      },
     },
     file: {
-      type: String, // video file ka path ya URL
-      required: true,
+      url: {
+        type: String, // video file URL
+        required: true,
+      },
+      type: {
+        type: String, // "video"
+        required: true,
+        enum: ["video"],
+      },
+      public_id: {
+        type: String, // Cloudinary public_id
+        required: true,
+      },
     },
     duration: {
-      type: Number, // seconds/minutes me
+      type: Number, // seconds
       required: true,
     },
     views: {
@@ -48,9 +70,15 @@ const videoSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
-videoSchema.plugin(aggregatePaginate)
+videoSchema.plugin(aggregatePaginate);
+
 export const Video = mongoose.model("Video", videoSchema);

@@ -2,22 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>User Login Test</title>
+  <title>Video Upload Test</title>
 </head>
 <body>
-  <h2>Login User (Testing)</h2>
+  <h2>Upload Video (Testing)</h2>
 
-  <form action="/api/v1/user/login" method="POST">
-    <label for="text">Email or Username:</label>
-    <input type="text" name="text" id="text" placeholder="Enter email or username" required>
+  <!-- Video Upload Form -->
+  <form action="/api/v1/user/video/upload" method="POST" enctype="multipart/form-data">
+    <label for="title">Title:</label>
+    <input type="text" name="title">
     <br><br>
 
-    <label for="password">Password:</label>
-    <input type="password" name="password" id="password" placeholder="Enter password" required>
+    <!-- Description -->
+    <label for="description">Description:</label>
+    <textarea name="description" id="description" rows="10" cols="10"></textarea>
     <br><br>
 
-    <button type="submit">Login</button>
+    <!-- Video -->
+    <label for="video">Select Video:</label>
+    <input type="file" name="video" id="video" accept="video/*" required>
+    <br><br>
+
+    <!-- Thumbnail -->
+    <label for="thumbnail">Select Thumbnail:</label>
+    <input type="file" name="thumbnail" id="thumbnail" accept="image/*" required>
+    <br><br>
+
+    <!-- Preview -->
+    <div>
+      <h3>Preview:</h3>
+      <video id="previewVideo" width="400" controls></video>
+      <br>
+      <img id="previewThumbnail" width="200" style="margin-top:10px; display:none;" alt="Thumbnail Preview">
+    </div>
+
+    <br>
+    <button type="submit">Upload Video</button>
   </form>
-  <button style="padding: 8px; margin-top: 2rem;"> <a href="/api/v1/user/logout">logout</a></button>
+
+  <script>
+    // Allowed types
+    const allowedVideoTypes = ["video/mp4", "video/webm", "video/ogg", "video/avi", "video/mkv", "video/quicktime"];
+    const allowedImageTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+
+    // Video validation
+    document.getElementById("video").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // size check
+      if (file.size > 50 * 1024 * 1024) {
+        alert("❌ Video size must be less than 50 MB");
+        event.target.value = "";
+        return;
+      }
+
+      // type check
+      if (!allowedVideoTypes.includes(file.type)) {
+        alert("❌ Only MP4, WEBM, OGG, AVI, MKV, MOV videos are allowed");
+        event.target.value = "";
+        return;
+      }
+
+      // preview
+      const videoURL = URL.createObjectURL(file);
+      document.getElementById("previewVideo").src = videoURL;
+    });
+
+    // Thumbnail validation
+    document.getElementById("thumbnail").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!allowedImageTypes.includes(file.type)) {
+        alert("❌ Only JPG, PNG, WEBP images are allowed");
+        event.target.value = "";
+        return;
+      }
+
+      const imgURL = URL.createObjectURL(file);
+      const imgPreview = document.getElementById("previewThumbnail");
+      imgPreview.src = imgURL;
+      imgPreview.style.display = "block";
+    });
+  </script>
 </body>
 </html>
