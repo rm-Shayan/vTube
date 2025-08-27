@@ -10,6 +10,7 @@ import {
   updateCoverImage,
   updateFullName,
   getUser,
+  getProfile,
 } from "../Controlers/user.controller.js";
 import { fileUploadHandler, uploadUserMedia} from "../Middlewares/fileUpload.middleware.js";
 import { jwtVerify } from "../Middlewares/auth.middleware.js";
@@ -47,5 +48,9 @@ router.post(
   fileUploadHandler.single("coverImage"),
   updateCoverImage
 );
+//pROFILE ROUTES
+router.get("/profile/:accountName", jwtVerify, getProfile);
+//QUERY PARAMETER K LIYE
+router.get("/profile", jwtVerify, getProfile);
 
 export default router;

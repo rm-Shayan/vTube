@@ -1,14 +1,14 @@
 import { asyncHandler } from "../Utils/asyncHandler.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { User } from "../Models/User.model.js";
+import mongoose from "mongoose";
 import {
   uploadToCloudinary,
   deleteFromCloudinary,
 } from "../Utils/cloudinaryService.js";
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { Aggregate } from "mongoose";
-import { hasSubscribers } from "diagnostics_channel";
+
 
 // 🛠 Utility: Generate and save tokens
 const generateAccessTokenAndRefreshToken = async (userId) => {
@@ -166,11 +166,10 @@ export const loginUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // only HTTPS in prod
     sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   };
 
-  res.cookie("accessToken", accessToken, cookieOptions);
-  res.cookie("refreshToken", refreshToken, cookieOptions);
+  res.cookie("accessToken", accessToken)
+  res.cookie("refreshToken", refreshToken,{...cookieOptions,maxAge: 7 * 24 * 60 * 60 * 1000,});
 
   return res.status(200).json({
     success: true,
@@ -380,7 +379,7 @@ const newAvatarPath = req?.file?.path;
   }
 
   if (oldAvatarPublicId) {
-    await deleteFromCloudinary(oldAvatarPublicId);
+    await deleteFromCloudinary(oldAvatarPublicId,"image");
   }
 
   user.avatar = {
@@ -422,7 +421,7 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
   }
 
   if (oldCoverImagePublicId) {
-    await deleteFromCloudinary(oldCoverImagePublicId);
+    await deleteFromCloudinary(oldCoverImagePublicId,"image");
   }
 
   user.coverImage = {
@@ -506,21 +505,27 @@ export const getUser = asyncHandler(async (req, res) => {
 
 
 export const getProfile = asyncHandler(async (req, res) => {
-  const { accountName } = req.body;
+  const accountName =
+    req.body?.accountName ||
+    req.query?.accountName ||
+    req.params?.accountName ||
+    req.user?.userName; // fallback to logged-in user
 
   if (!accountName) {
     throw new ApiError(400, "Account name is required");
   }
 
+  const userId = req.user?._id ? new mongoose.Types.ObjectId(req.user._id) : null;
+
   const account = await User.aggregate([
     {
-      $match: { accountName: accountName.toLowerCase() },
+      $match: { userName: accountName.toLowerCase() },
     },
     {
       $lookup: {
         from: "followers",
         localField: "_id",
-        foreignField: "following", // followers of this profile
+        foreignField: "following", // log jo is user ko follow kr rahe hain
         as: "followers",
       },
     },
@@ -528,7 +533,7 @@ export const getProfile = asyncHandler(async (req, res) => {
       $lookup: {
         from: "followers",
         localField: "_id",
-        foreignField: "follower", // accounts this profile is following
+        foreignField: "follower", // log jin ko ye user follow kr raha hai
         as: "following",
       },
     },
@@ -536,17 +541,9 @@ export const getProfile = asyncHandler(async (req, res) => {
       $addFields: {
         followersCount: { $size: "$followers" },
         followingCount: { $size: "$following" },
-
-        // kya logged-in user is profile ko follow kar raha hai?
-        isFollowing: {
-          $cond: {
-            if: {
-              $in: [req.user?._id, "$followers.follower"], 
-            },
-            then: true,
-            else: false,
-          },
-        },
+        isFollowing: userId
+          ? { $in: [userId, "$followers.follower"] }
+          : false, // agar login hi nahi to false
       },
     },
     {
@@ -560,8 +557,6 @@ export const getProfile = asyncHandler(async (req, res) => {
         followingCount: 1,
         isFollowing: 1,
         isNotified: 1,
-        password: 0,
-        refreshToken: 0,
       },
     },
   ]);
@@ -570,11 +565,11 @@ export const getProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Account not found");
   }
 
-  return res.status(200).json({
-    success: true,
-    data: account[0],
-  });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, account[0], "Profile fetched successfully"));
 });
+
 
 
 export const getWatchHistory = asyncHandler(async (req, res) => {

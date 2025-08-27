@@ -2,10 +2,11 @@ import { Video } from "../Models/Video.model.js";
 import { ApiError } from "../Utils/ApiError.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
 import { uploadToCloudinary } from "../Utils/cloudinaryService.js";
+import { deleteFromCloudinary } from "../Utils/cloudinaryService.js";
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import fs from "fs";
 import mongoose from "mongoose";
-
+import { User } from "../Models/User.model.js";
 export const uploadVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
 
@@ -132,11 +133,49 @@ export const getVideos = asyncHandler(async (req, res) => {
 });
 
 
+export const getUserVideos = asyncHandler(async (req, res) => {
+  const userId = new mongoose.Types.ObjectId(req.user._id);
+
+  const userVideos = await User.aggregate([
+    {
+      $match: { _id: userId }
+    },
+    {
+      $lookup: {
+        from: "videos",         // videos collection
+        localField: "_id",      // user._id
+        foreignField: "owner",  // video.owner
+        as: "videos"
+      }
+    },
+    {
+      $project: {
+        userName: 1,            // sirf ye fields bhejni hain
+        email: 1,
+        "videos._id": 1,
+        "videos.title": 1,
+        "videos.description": 1,
+        "videos.thumbnail": 1,
+        "videos.createdAt": 1,
+        "videos.views": 1,
+      }
+    }
+  ]);
+
+  if (!userVideos || userVideos.length === 0) {
+    throw new ApiError(404, "User or videos not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, userVideos[0], "User videos fetched successfully"));
+});
+
 export const updateVideo = asyncHandler(async (req, res) => {
   const { title, description, videoId } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    return res.status(400).json({ message: "Invalid videoId" });
+    throw new ApiError(400, "Invalid videoId");
   }
 
   // fields to update
@@ -151,12 +190,39 @@ export const updateVideo = asyncHandler(async (req, res) => {
   );
 
   if (!updatedVideo) {
-    return res.status(404).json({ message: "Video not found" });
+    return res.status(404).json(new ApiError(404, "Video not found" ));
   }
 
-  return res.status(200).json({
-    success: true,
-    message: "Video updated successfully",
-    video: updatedVideo,
-  });
+  return res.status(200).json(new ApiResponse(200,updateVideo,"message video updated successfully"));
 });
+
+
+
+export const deleteVideo = asyncHandler(async (req, res) => {
+  const videoId = req.params.id || req.query.id || req.body.id;
+
+  if (!mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  const deletedVideo = await Video.findByIdAndDelete(videoId);
+
+  if (!deletedVideo) {
+    throw new ApiError(404, "Video not found or already deleted");
+  }
+
+  // Agar thumbnail aur file hain to Cloudinary se bhi delete karo
+   if (deletedVideo.thumbnail?.public_id) {
+    await deleteFromCloudinary(deletedVideo.thumbnail.public_id, "image");
+  }
+
+  // Video file delete
+  if (deletedVideo.file?.public_id) {
+    await deleteFromCloudinary(deletedVideo.file.public_id, "video");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Video deleted successfully"));
+});
+
