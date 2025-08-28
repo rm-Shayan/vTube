@@ -7,6 +7,7 @@ import { ApiResponse } from "../Utils/ApiResponse.js";
 import fs from "fs";
 import mongoose from "mongoose";
 import { User } from "../Models/User.model.js";
+
 export const uploadVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
 
@@ -195,7 +196,6 @@ export const updateVideo = asyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200,updateVideo,"message video updated successfully"));
 });
-
 
 
 export const deleteVideo = asyncHandler(async (req, res) => {

@@ -9,7 +9,6 @@ import {
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
-
 // 🛠 Utility: Generate and save tokens
 const generateAccessTokenAndRefreshToken = async (userId) => {
   try {
@@ -127,7 +126,8 @@ export const registerUser = asyncHandler(async (req, res) => {
 // 🔐 Login
 export const loginUser = asyncHandler(async (req, res) => {
   const { text, password } = req.body;
-  if (!text || !password) throw new ApiError(400, "Username/Email and password are required");
+  if (!text || !password)
+    throw new ApiError(400, "Username/Email and password are required");
 
   const query = text.includes("@") ? { email: text } : { userName: text };
   const user = await User.findOne(query).select("+password");
@@ -136,7 +136,8 @@ export const loginUser = asyncHandler(async (req, res) => {
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) throw new ApiError(401, "Invalid credentials");
 
-  const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id);
+  const { accessToken, refreshToken } =
+    await generateAccessTokenAndRefreshToken(user._id);
 
   // sanitized user
   const sanitizedUser = {
@@ -162,22 +163,27 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   // Web: return tokens in cookies
-  const cookieOptions = {
+  const accessTokenOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // only HTTPS in prod
-    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    secure: process.env.NODE_ENV === "production", // dev me false rakhna
+    sameSite: "lax", // ya "strict" agar sirf same-site pe chahiye
+    maxAge: 15 * 60 * 1000, // 15 minutes
   };
 
-  res.cookie("accessToken", accessToken)
-  res.cookie("refreshToken", refreshToken,{...cookieOptions,maxAge: 7 * 24 * 60 * 60 * 1000,});
+  const refreshTokenOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
 
-  return res.status(200).json({
-    success: true,
-    message: "Login successful",
-    user: sanitizedUser,
-  });
+  res.cookie("accessToken", accessToken, accessTokenOptions);
+  res.cookie("refreshToken", refreshToken, refreshTokenOptions);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, sanitizedUser, " login successfuly"));
 });
-
 
 // 🚪 Logout
 export const logoutUser = asyncHandler(async (req, res) => {
@@ -212,15 +218,17 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   console.log("Incoming Refresh Token:", incomingRefreshToken);
 
   try {
-    const decoded = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
-    console.log("decode id",decoded?._id)
-   const user = await User.findById(decoded._id).select("+refreshToken");
-
+    const decoded = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+    console.log("decode id", decoded?._id);
+    const user = await User.findById(decoded._id).select("+refreshToken");
 
     if (!user) {
       throw new ApiError(401, "User not found");
     }
-console.log("Found User:", user);
+    console.log("Found User:", user);
 
     if (user.refreshToken !== incomingRefreshToken) {
       throw new ApiError(401, "Invalid or expired refresh token");
@@ -229,19 +237,28 @@ console.log("Found User:", user);
     const { accessToken, refreshToken } =
       await generateAccessTokenAndRefreshToken(user._id);
 
+    const accessTokenOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // dev me false rakhna
+      sameSite: "lax", // ya "strict" agar sirf same-site pe chahiye
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    };
+
+    const refreshTokenOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    };
+
     res
-      .cookie("accessToken", accessToken, { httpOnly: true, secure: true })
-      .cookie("refreshToken", refreshToken, { httpOnly: true, secure: true })
-      .json({
-        success: true,
-        message: "Token refreshed",
-      });
+      .cookie("accessToken", accessToken, accessTokenOptions)
+      .cookie("refreshToken", refreshToken, refreshTokenOptions)
+      .json(new ApiResponse(200, "Token refreshed"));
   } catch (err) {
     throw new ApiError(401, "Invalid or expired refresh token");
   }
 });
-
-
 
 export const updateUserName = asyncHandler(async (req, res) => {
   const newUserName = req?.body?.userName;
@@ -290,13 +307,15 @@ export const updateUserName = asyncHandler(async (req, res) => {
     updatedAt: user.updatedAt,
   };
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      sanitizedUser,
-      `Username updated from ${oldName} to ${newUserName}`
-    )
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        sanitizedUser,
+        `Username updated from ${oldName} to ${newUserName}`
+      )
+    );
 });
 
 export const updateFullName = asyncHandler(async (req, res) => {
@@ -363,7 +382,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
 
 // Update Avatar
 export const updateAvatar = asyncHandler(async (req, res) => {
-const newAvatarPath = req?.file?.path;
+  const newAvatarPath = req?.file?.path;
   if (!newAvatarPath) {
     throw new ApiError(400, "Avatar is required");
   }
@@ -379,7 +398,7 @@ const newAvatarPath = req?.file?.path;
   }
 
   if (oldAvatarPublicId) {
-    await deleteFromCloudinary(oldAvatarPublicId,"image");
+    await deleteFromCloudinary(oldAvatarPublicId, "image");
   }
 
   user.avatar = {
@@ -421,7 +440,7 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
   }
 
   if (oldCoverImagePublicId) {
-    await deleteFromCloudinary(oldCoverImagePublicId,"image");
+    await deleteFromCloudinary(oldCoverImagePublicId, "image");
   }
 
   user.coverImage = {
@@ -485,11 +504,10 @@ export const updateBio = asyncHandler(async (req, res) => {
     coverImage: user.coverImage ? { url: user.coverImage.url } : null,
   };
 
-  res.status(200).json(
-    new ApiResponse(200, sanitizedUser, "Bio updated successfully")
-  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, sanitizedUser, "Bio updated successfully"));
 });
-
 
 export const getUser = asyncHandler(async (req, res) => {
   const user = req?.user;
@@ -503,7 +521,6 @@ export const getUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User retrieved successfully"));
 });
 
-
 export const getProfile = asyncHandler(async (req, res) => {
   const accountName =
     req.body?.accountName ||
@@ -515,35 +532,76 @@ export const getProfile = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Account name is required");
   }
 
-  const userId = req.user?._id ? new mongoose.Types.ObjectId(req.user._id) : null;
+  const userId = req.user?._id
+    ? new mongoose.Types.ObjectId(req.user._id)
+    : null;
 
   const account = await User.aggregate([
     {
       $match: { userName: accountName.toLowerCase() },
     },
+    // Followers (users who follow this account)
     {
       $lookup: {
         from: "followers",
         localField: "_id",
-        foreignField: "following", // log jo is user ko follow kr rahe hain
+        foreignField: "following",
         as: "followers",
       },
     },
+    // Following (users this account is following)
     {
       $lookup: {
         from: "followers",
         localField: "_id",
-        foreignField: "follower", // log jin ko ye user follow kr raha hai
+        foreignField: "follower",
         as: "following",
       },
     },
     {
       $addFields: {
-        followersCount: { $size: "$followers" },
-        followingCount: { $size: "$following" },
+        // ✅ Count only accepted followers
+        followersCount: {
+          $size: {
+            $filter: {
+              input: "$followers",
+              as: "f",
+              cond: { $eq: ["$$f.status", "accepted"] },
+            },
+          },
+        },
+        // ✅ Count only accepted following
+        followingCount: {
+          $size: {
+            $filter: {
+              input: "$following",
+              as: "f",
+              cond: { $eq: ["$$f.status", "accepted"] },
+            },
+          },
+        },
+        // ✅ Check if logged-in user follows this account (status accepted only)
         isFollowing: userId
-          ? { $in: [userId, "$followers.follower"] }
-          : false, // agar login hi nahi to false
+          ? {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: "$followers",
+                      as: "f",
+                      cond: {
+                        $and: [
+                          { $eq: ["$$f.follower", userId] },
+                          { $eq: ["$$f.status", "accepted"] },
+                        ],
+                      },
+                    },
+                  },
+                },
+                0,
+              ],
+            }
+          : false,
       },
     },
     {
@@ -570,8 +628,6 @@ export const getProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, account[0], "Profile fetched successfully"));
 });
 
-
-
 export const getWatchHistory = asyncHandler(async (req, res) => {
   const userId = req?.user?._id;
 
@@ -588,7 +644,7 @@ export const getWatchHistory = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "videos",
-        localField: "watchHistory",   // User.watchHistory -> array of Video._id
+        localField: "watchHistory", // User.watchHistory -> array of Video._id
         foreignField: "_id",
         as: "watchHistoryDetails",
       },
@@ -600,7 +656,7 @@ export const getWatchHistory = asyncHandler(async (req, res) => {
       $lookup: {
         from: "users",
         localField: "watchHistoryDetails.owner", // ✅ owner from Video
-        foreignField: "_id",                      // matches User._id
+        foreignField: "_id", // matches User._id
         as: "watchHistoryDetails.ownerDetails",
       },
     },

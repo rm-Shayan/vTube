@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import userRoute from "./Routes/user.route.js";
 import { ApiErrorMiddleware } from "./Middlewares/ApiError.middleware.js";
 import refreshRouter from "./Routes/refresh.route.js";
+import followerRoute from "./Routes/follower.route.js"
 import videoRoute from "./Routes/videos.route.js";
 export const app = express();
 
@@ -36,10 +37,13 @@ app.use("/api/v1/video", videoRoute);
 
 app.use("/api/v1/token", refreshRouter);
 
+app.use('/api/v1/follow',followerRoute)
 app.get("/register", (req, res) => {
   res.render("register");
 });
 
-
+app.get("/profile",(req,res)=>{
+  res.render("profile")
+})
 // Error handling middleware (must be last)
 app.use(ApiErrorMiddleware);

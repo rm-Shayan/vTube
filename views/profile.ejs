@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Follower</title>
+</head>
+<body>
+  <h2>Follow User</h2>
+
+  <!-- yahan followingId enter karenge -->
+  <form id="followForm">
+    <label for="fid">Following ID:</label>
+    <input type="text" id="fid" name="fid" required>
+    <button type="submit">Follow</button>
+  </form>
+
+  <p id="res"></p>
+
+  <script>
+    const form = document.getElementById("followForm");
+    const resEl = document.getElementById("res");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const followingId = document.getElementById("fid").value;
+
+      try {
+        const response = await fetch(`http://localhost:5600/api/v1/follow/${followingId}`, {
+          method: "POST",
+          credentials: "include", // important -> cookie bhejega
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({}) // agar tum body me bhi data bhejna chaho
+        });
+
+        const data = await response.json();
+        resEl.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        resEl.innerText = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
