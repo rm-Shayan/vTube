@@ -84,7 +84,7 @@ coverImage: {
     watchHistory: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Video",
+        ref: "WatchHistory",
       },
     ],
     refreshToken: {

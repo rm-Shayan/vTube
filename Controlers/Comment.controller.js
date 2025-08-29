@@ -72,3 +72,61 @@ export const deleteComment = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Comment deleted successfully"));
 });
+
+export const getComments = asyncHandler(async (req, res) => {
+  const { videoId } = req.params; // ya req.body
+  let { page = 2, limit = 10 } = req.query; // default page 2, limit 10
+
+  page = parseInt(page);
+  limit = parseInt(limit);
+
+  if (!videoId) {
+    throw new ApiError(400, "Video ID is required");
+  }
+
+  const comments = await Comment.aggregate([
+    { $match: { video: new mongoose.Types.ObjectId(videoId) } },
+    { $sort: { createdAt: -1 } }, // latest first
+    { $skip: (page - 1) * limit }, // page 2 se start
+    { $limit: limit },
+
+    // Join with user info
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "userDetails"
+      }
+    },
+    { $unwind: "$userDetails" },
+
+    // Project only necessary fields
+    {
+      $project: {
+        _id: 1,
+        content: 1,
+        createdAt: 1,
+        user: {
+          userName: "$userDetails.userName",
+          avatar: "$userDetails.avatar.url"
+        }
+      }
+    }
+  ]);
+
+  const totalComments = await Comment.countDocuments({ video: videoId });
+
+  res.status(200).json({
+    statusCode: 200,
+    data: {
+      count: comments.length,
+      total: totalComments,
+      page,
+      limit,
+      comments
+    },
+    message: "Comments fetched successfully",
+    success: true
+  });
+});

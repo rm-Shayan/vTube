@@ -187,13 +187,19 @@ export const updateVideo = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200,updateVideo,"message video updated successfully"));
 });
 
+
 export const getUserVideos = asyncHandler(async (req, res) => {
   const userId = new mongoose.Types.ObjectId(req.user._id || req.params?.id);
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
 
   const userVideos = await Video.aggregate([
     { $match: { owner: userId } },
+    { $sort: { createdAt: -1 } }, // latest videos first
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
 
-    // bring owner details
+    // bring owner minimal info
     {
       $lookup: {
         from: "users",
@@ -203,58 +209,47 @@ export const getUserVideos = asyncHandler(async (req, res) => {
       }
     },
     { $unwind: "$ownerDetails" },
-
-    // bring comments
     {
-      $lookup: {
-        from: "comments",
-        localField: "comments",
-        foreignField: "_id",
-        as: "allComments"
-      }
-    },
-    { $unwind: { path: "$allComments", preserveNullAndEmptyArrays: true } },
-
-    // bring commenter info
-    {
-      $lookup: {
-        from: "users",
-        localField: "allComments.user",
-        foreignField: "_id",
-        as: "commentUser"
-      }
-    },
-    { $unwind: { path: "$commentUser", preserveNullAndEmptyArrays: true } },
-
-    // group comments under video
-    {
-      $group: {
-        _id: "$_id",
-        title: { $first: "$title" },
-        description: { $first: "$description" },
-        thumbnail: { $first: { url: "$thumbnail.url", type: "$thumbnail.type" } },
-        videoFile: { $first: { url: "$file.url", type: "$file.type" } },
-        views: { $first: "$views" },
-        createdAt: { $first: "$createdAt" },
-        ownerDetails: { $first: { _id: "$ownerDetails._id", userName: "$ownerDetails.userName", avatar: "$ownerDetails.avatar.url" } },
-        comments: {
-          $push: {
-            _id: "$allComments._id",
-            content: "$allComments.content",
-            createdAt: "$allComments.createdAt",
-            user: {
-              userName: "$commentUser.userName",
-              avatar: "$commentUser.avatar.url"
-            }
-          }
+      $addFields: {
+        ownerDetails: {
+          _id: "$ownerDetails._id",
+          userName: "$ownerDetails.userName",
+          avatar: "$ownerDetails.avatar.url"
         }
       }
     },
 
-    // limit comments to latest 10
+    // bring comments (latest 10)
     {
-      $addFields: {
-        comments: { $slice: ["$comments", -10] }
+      $lookup: {
+        from: "comments",
+        let: { commentIds: "$comments" },
+        pipeline: [
+          { $match: { $expr: { $in: ["$_id", "$$commentIds"] } } },
+          { $sort: { createdAt: -1 } },
+          { $limit: 10 },
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "userDetails"
+            }
+          },
+          { $unwind: "$userDetails" },
+          {
+            $project: {
+              _id: 1,
+              content: 1,
+              createdAt: 1,
+              user: {
+                userName: "$userDetails.userName",
+                avatar: "$userDetails.avatar.url"
+              }
+            }
+          }
+        ],
+        as: "comments"
       }
     },
 
@@ -264,8 +259,8 @@ export const getUserVideos = asyncHandler(async (req, res) => {
         _id: 1,
         title: 1,
         description: 1,
-        thumbnail: 1,
-        videoFile: 1,
+        thumbnail: { url: "$thumbnail.url", type: "$thumbnail.type" },
+        videoFile: { url: "$file.url", type: "$file.type" },
         views: 1,
         createdAt: 1,
         ownerDetails: 1,
@@ -280,9 +275,14 @@ export const getUserVideos = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { videos: userVideos }, "User videos fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { count: userVideos.length, videos: userVideos },
+        "User videos fetched successfully"
+      )
+    );
 });
-
 
 
 
