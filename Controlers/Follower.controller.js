@@ -40,15 +40,15 @@ export const addFollower = asyncHandler(async (req, res) => {
 });
 
 export const respondToFollowRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params||req.body; // follower doc ka id
-  const { action } = req.body; // "accept" ya "reject"
+  const requestId = req.params?.requestId || req.body?.requestId; 
+  const action = req.body?.action || req.query?.action || req.params?.action;
 
   const followDoc = await Follower.findById(requestId);
   if (!followDoc) throw new ApiError(404, "Follow request not found");
 
-  if (action === "accept") {
+  if (action === "accept" || action === "accepted") {
     followDoc.status = "accepted";
-  } else if (action === "reject") {
+  } else if (action === "reject" || action === "rejected") {
     followDoc.status = "blocked";
   } else {
     throw new ApiError(400, "Invalid action");
@@ -58,4 +58,24 @@ export const respondToFollowRequest = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, followDoc, `Request ${action}ed successfully`));
+});
+
+
+
+export const deleteFollower = asyncHandler(async (req, res) => {
+  const requestId = req.params?.requestId || req.body?.requestId;
+
+  if (!requestId) {
+    throw new ApiError(400, "Follow request ID is required");
+  }
+
+  const deletedFollowerDoc = await Follower.findByIdAndDelete(requestId);
+
+  if (!deletedFollowerDoc) {
+    throw new ApiError(404, "Follow request not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, deletedFollowerDoc, "Follow request deleted successfully"));
 });

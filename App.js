@@ -6,6 +6,7 @@ import { ApiErrorMiddleware } from "./Middlewares/ApiError.middleware.js";
 import refreshRouter from "./Routes/refresh.route.js";
 import followerRoute from "./Routes/follower.route.js"
 import videoRoute from "./Routes/videos.route.js";
+import commentRoute from "./Routes/comment.route.js"
 export const app = express();
 
 // CORS setup
@@ -38,6 +39,10 @@ app.use("/api/v1/video", videoRoute);
 app.use("/api/v1/token", refreshRouter);
 
 app.use('/api/v1/follow',followerRoute)
+
+
+app.use("/api/v1/comment",commentRoute)
+
 app.get("/register", (req, res) => {
   res.render("register");
 });
@@ -45,5 +50,8 @@ app.get("/register", (req, res) => {
 app.get("/profile",(req,res)=>{
   res.render("profile")
 })
-// Error handling middleware (must be last)
+app.get("/comment",(req,res)=>{
+  res.render("comment")
+})
 app.use(ApiErrorMiddleware);
+// Error handling middleware (must be last)

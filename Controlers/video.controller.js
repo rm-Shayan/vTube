@@ -6,7 +6,7 @@ import { deleteFromCloudinary } from "../Utils/cloudinaryService.js";
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import fs from "fs";
 import mongoose from "mongoose";
-import { User } from "../Models/User.model.js";
+
 
 export const uploadVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
@@ -87,90 +87,80 @@ export const uploadVideo = asyncHandler(async (req, res) => {
 });
 
 export const getVideos = asyncHandler(async (req, res) => {
-  // frontend se optional query params (page, limit, search) bhi aa sakte hain
   const { page = 1, limit = 10 } = req.query;
 
   const videos = await Video.aggregate([
-    {
-      $sort: { createdAt: -1 } // latest videos first
-    },
-    {
-      $skip: (page - 1) * parseInt(limit) // pagination
-    },
-    {
-      $limit: parseInt(limit) // limit apply
-    },
+    { $sort: { createdAt: -1 } },
+    { $skip: (parseInt(page) - 1) * parseInt(limit) },
+    { $limit: parseInt(limit) },
+
+    // Owner minimal info
     {
       $lookup: {
-        from: "users",               // collection name of User model
-        localField: "owner",         // field in Video model (reference to user)
-        foreignField: "_id",         // match with User _id
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
         as: "ownerDetails"
       }
     },
-    {
-      $unwind: "$ownerDetails"
-    },
+    { $unwind: "$ownerDetails" },
     {
       $project: {
         title: 1,
         description: 1,
-        videoFile: 1,
         thumbnail: 1,
+        videoFile: 1,
         views: 1,
         createdAt: 1,
-        "ownerDetails._id": 1,
-        "ownerDetails.userName": 1,
-        "ownerDetails.avatar.url": 1
+        ownerDetails: {
+          _id: "$ownerDetails._id",
+          userName: "$ownerDetails.userName",
+          avatar: "$ownerDetails.avatar.url"
+        },
+        comments: 1
       }
-    }
-  ]);
-
-  res.status(200).json({
-    success: true,
-    count: videos.length,
-    videos,
-  });
-});
-
-
-export const getUserVideos = asyncHandler(async (req, res) => {
-  const userId = new mongoose.Types.ObjectId(req.user._id);
-
-  const userVideos = await User.aggregate([
-    {
-      $match: { _id: userId }
     },
+
+    // Comments with minimal user info
     {
       $lookup: {
-        from: "videos",         // videos collection
-        localField: "_id",      // user._id
-        foreignField: "owner",  // video.owner
-        as: "videos"
-      }
-    },
-    {
-      $project: {
-        userName: 1,            // sirf ye fields bhejni hain
-        email: 1,
-        "videos._id": 1,
-        "videos.title": 1,
-        "videos.description": 1,
-        "videos.thumbnail": 1,
-        "videos.createdAt": 1,
-        "videos.views": 1,
+        from: "comments",
+        let: { commentIds: "$comments" },
+        pipeline: [
+          { $match: { $expr: { $in: ["$_id", "$$commentIds"] } } },
+          { $sort: { createdAt: -1 } },
+          { $limit: 10 },
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "userDetails"
+            }
+          },
+          { $unwind: "$userDetails" },
+          {
+            $project: {
+              _id: 1,
+              content: 1,
+              createdAt: 1,
+              user: {
+                userName: "$userDetails.userName",
+                avatar: "$userDetails.avatar.url"
+              }
+            }
+          }
+        ],
+        as: "comments"
       }
     }
   ]);
 
-  if (!userVideos || userVideos.length === 0) {
-    throw new ApiError(404, "User or videos not found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, userVideos[0], "User videos fetched successfully"));
+  res.status(200).json(
+    new ApiResponse(200, { count: videos.length, videos }, "Videos fetched successfully")
+  );
 });
+
 
 export const updateVideo = asyncHandler(async (req, res) => {
   const { title, description, videoId } = req.body;
@@ -196,6 +186,104 @@ export const updateVideo = asyncHandler(async (req, res) => {
 
   return res.status(200).json(new ApiResponse(200,updateVideo,"message video updated successfully"));
 });
+
+export const getUserVideos = asyncHandler(async (req, res) => {
+  const userId = new mongoose.Types.ObjectId(req.user._id || req.params?.id);
+
+  const userVideos = await Video.aggregate([
+    { $match: { owner: userId } },
+
+    // bring owner details
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails"
+      }
+    },
+    { $unwind: "$ownerDetails" },
+
+    // bring comments
+    {
+      $lookup: {
+        from: "comments",
+        localField: "comments",
+        foreignField: "_id",
+        as: "allComments"
+      }
+    },
+    { $unwind: { path: "$allComments", preserveNullAndEmptyArrays: true } },
+
+    // bring commenter info
+    {
+      $lookup: {
+        from: "users",
+        localField: "allComments.user",
+        foreignField: "_id",
+        as: "commentUser"
+      }
+    },
+    { $unwind: { path: "$commentUser", preserveNullAndEmptyArrays: true } },
+
+    // group comments under video
+    {
+      $group: {
+        _id: "$_id",
+        title: { $first: "$title" },
+        description: { $first: "$description" },
+        thumbnail: { $first: { url: "$thumbnail.url", type: "$thumbnail.type" } },
+        videoFile: { $first: { url: "$file.url", type: "$file.type" } },
+        views: { $first: "$views" },
+        createdAt: { $first: "$createdAt" },
+        ownerDetails: { $first: { _id: "$ownerDetails._id", userName: "$ownerDetails.userName", avatar: "$ownerDetails.avatar.url" } },
+        comments: {
+          $push: {
+            _id: "$allComments._id",
+            content: "$allComments.content",
+            createdAt: "$allComments.createdAt",
+            user: {
+              userName: "$commentUser.userName",
+              avatar: "$commentUser.avatar.url"
+            }
+          }
+        }
+      }
+    },
+
+    // limit comments to latest 10
+    {
+      $addFields: {
+        comments: { $slice: ["$comments", -10] }
+      }
+    },
+
+    // final projection
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        description: 1,
+        thumbnail: 1,
+        videoFile: 1,
+        views: 1,
+        createdAt: 1,
+        ownerDetails: 1,
+        comments: 1
+      }
+    }
+  ]);
+
+  if (!userVideos || userVideos.length === 0) {
+    throw new ApiError(404, "User or videos not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { videos: userVideos }, "User videos fetched successfully"));
+});
+
+
 
 
 export const deleteVideo = asyncHandler(async (req, res) => {

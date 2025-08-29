@@ -12,45 +12,41 @@ import {
   getUser,
   getProfile,
 } from "../Controlers/user.controller.js";
-import { fileUploadHandler, uploadUserMedia} from "../Middlewares/fileUpload.middleware.js";
+import { fileUploadHandler } from "../Middlewares/fileUpload.middleware.js";
 import { jwtVerify } from "../Middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Register route with file upload support
-router.post(
-  "/register",
-  uploadUserMedia,
-  registerUser
-);
-
-// Login route
+// Public
+router.post("/register", fileUploadHandler.fields([{ name: "avatar" }, { name: "coverImage" }]), registerUser);
 router.post("/login", loginUser);
 
-// Secure routes
-router.get("/logout", jwtVerify, logoutUser); // changed to POST
+// Authenticated
+router.post("/logout", jwtVerify, logoutUser);
 router.get("/", jwtVerify, getUser);
 
-router.post("/update/userName", jwtVerify, updateUserName);
-router.post("/update/fullName", jwtVerify, updateFullName); // <-- Ensure you create this in controller
-router.post("/update/bio", jwtVerify, updateBio);
-router.post("/update/password", jwtVerify, updatePassword);
+// Updates
+router.patch("/update/userName", jwtVerify, updateUserName);
+router.patch("/update/fullName", jwtVerify, updateFullName);
+router.patch("/update/bio", jwtVerify, updateBio);
+router.patch("/update/password", jwtVerify, updatePassword);
 
-router.post(
+router.patch(
   "/update/avatar",
   jwtVerify,
   fileUploadHandler.single("avatar"),
   updateAvatar
 );
-router.post(
+router.patch(
   "/update/coverImage",
   jwtVerify,
   fileUploadHandler.single("coverImage"),
   updateCoverImage
 );
-//pROFILE ROUTES
-router.get("/profile/:accountName", jwtVerify, getProfile);
-//QUERY PARAMETER K LIYE
-router.get("/profile", jwtVerify, getProfile);
 
+// Profile
+router.get("/profile/:accountName", jwtVerify, getProfile);
+
+// If no accountName → fallback to logged in user
+router.get("/profile", jwtVerify, getProfile);
 export default router;

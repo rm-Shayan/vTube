@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Comment</title>
+</head>
+<body>
+  <h2>Add Comment (Testing)</h2>
+
+  <form action="http://localhost:5600/api/v1/comment/addComment" method="POST">
+
+    <!-- Video ID -->
+    <label for="videoId">Video ID:</label>
+    <input type="text" id="videoId" name="videoId" required />
+    <br /><br />
+
+    <!-- Content -->
+    <label for="content">Comment:</label>
+    <textarea id="content" name="content" rows="4" cols="40" required></textarea>
+    <br /><br />
+
+    <button type="submit">Add Comment</button>
+  </form>
+</body>
+</html>
