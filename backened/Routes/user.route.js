@@ -22,7 +22,7 @@ router.post("/register", fileUploadHandler.fields([{ name: "avatar" }, { name: "
 router.post("/login", loginUser);
 
 // Authenticated
-router.post("/logout", jwtVerify, logoutUser);
+router.get("/logout", jwtVerify, logoutUser);
 router.get("/", jwtVerify, getUser);
 
 // Updates

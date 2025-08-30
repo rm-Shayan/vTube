@@ -7,12 +7,13 @@ import refreshRouter from "./Routes/refresh.route.js";
 import followerRoute from "./Routes/follower.route.js"
 import videoRoute from "./Routes/videos.route.js";
 import commentRoute from "./Routes/comment.route.js"
+import watvhHistoryRoute from "./Routes/watchHistory.route.js"
 export const app = express();
 
 // CORS setup
 app.use(
   cors({
-    origin: "http://localhost:3000", // React frontend URL
+    origin: "http://localhost:5600", // React frontend URL
     credentials: true,
   })
 );
@@ -53,5 +54,7 @@ app.get("/profile",(req,res)=>{
 app.get("/comment",(req,res)=>{
   res.render("comment")
 })
+
+app.use("/api/v2/watchHistory",watvhHistoryRoute)
 app.use(ApiErrorMiddleware);
 // Error handling middleware (must be last)

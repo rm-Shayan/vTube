@@ -163,19 +163,21 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   // Web: return tokens in cookies
-  const accessTokenOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // dev me false rakhna
-    sameSite: "lax", // ya "strict" agar sirf same-site pe chahiye
-    maxAge: 15 * 60 * 1000, // 15 minutes
-  };
+  const isProduction = process.env.NODE_ENV === "production";
 
-  const refreshTokenOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  };
+const accessTokenOptions = {
+  httpOnly: true,
+  secure: isProduction,          // true in prod, false in dev
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: 15 * 60 * 1000,
+};
+
+const refreshTokenOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 
   res.cookie("accessToken", accessToken, accessTokenOptions);
   res.cookie("refreshToken", refreshToken, refreshTokenOptions);
@@ -237,19 +239,22 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } =
       await generateAccessTokenAndRefreshToken(user._id);
 
-    const accessTokenOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // dev me false rakhna
-      sameSite: "lax", // ya "strict" agar sirf same-site pe chahiye
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    };
+    
+ const isProduction = process.env.NODE_ENV === "production";
 
-    const refreshTokenOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    };
+const accessTokenOptions = {
+  httpOnly: true,
+  secure: isProduction,          // true in prod, false in dev
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: 15 * 60 * 1000,
+};
+
+const refreshTokenOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 
     res
       .cookie("accessToken", accessToken, accessTokenOptions)
@@ -628,64 +633,3 @@ export const getProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, account[0], "Profile fetched successfully"));
 });
 
-export const getWatchHistory = asyncHandler(async (req, res) => {
-  const userId = req?.user?._id;
-
-  if (!userId) {
-    throw new ApiError(400, "Unauthorized");
-  }
-
-  const watchHistory = await User.aggregate([
-    {
-      $match: {
-        _id: new mongoose.Types.ObjectId(userId),
-      },
-    },
-    {
-      $lookup: {
-        from: "videos",
-        localField: "watchHistory", // User.watchHistory -> array of Video._id
-        foreignField: "_id",
-        as: "watchHistoryDetails",
-      },
-    },
-    {
-      $unwind: "$watchHistoryDetails",
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "watchHistoryDetails.owner", // ✅ owner from Video
-        foreignField: "_id", // matches User._id
-        as: "watchHistoryDetails.ownerDetails",
-      },
-    },
-    {
-      $unwind: "$watchHistoryDetails.ownerDetails",
-    },
-    {
-      $group: {
-        _id: "$_id",
-        watchHistoryDetails: { $push: "$watchHistoryDetails" },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        "watchHistoryDetails._id": 1,
-        "watchHistoryDetails.title": 1,
-        "watchHistoryDetails.thumbnail": 1,
-        "watchHistoryDetails.duration": 1,
-        "watchHistoryDetails.views": 1,
-        "watchHistoryDetails.ownerDetails._id": 1,
-        "watchHistoryDetails.ownerDetails.userName": 1,
-        "watchHistoryDetails.ownerDetails.avatar": 1,
-      },
-    },
-  ]);
-
-  return res.status(200).json({
-    success: true,
-    watchHistory: watchHistory[0]?.watchHistoryDetails || [],
-  });
-});
