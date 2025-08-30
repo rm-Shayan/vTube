@@ -163,11 +163,11 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   // Web: return tokens in cookies
-  const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production";
 
 const accessTokenOptions = {
   httpOnly: true,
-  secure: isProduction,          // true in prod, false in dev
+  secure: isProduction,
   sameSite: isProduction ? "none" : "lax",
   maxAge: 15 * 60 * 1000,
 };
@@ -242,20 +242,21 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     
  const isProduction = process.env.NODE_ENV === "production";
 
-const accessTokenOptions = {
-  httpOnly: true,
-  secure: isProduction,          // true in prod, false in dev
-  sameSite: isProduction ? "none" : "lax",
-  maxAge: 15 * 60 * 1000,
-};
+  // Cookie options
+  const accessTokenOptions = {
+    httpOnly: true,
+    secure: isProduction,                  // prod: true, dev: false
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 15 * 60 * 1000,               // 15 minutes
+  };
 
-const refreshTokenOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
-
+  const refreshTokenOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,      // 7 days
+  };
+  
     res
       .cookie("accessToken", accessToken, accessTokenOptions)
       .cookie("refreshToken", refreshToken, refreshTokenOptions)

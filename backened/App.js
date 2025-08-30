@@ -11,12 +11,26 @@ import watvhHistoryRoute from "./Routes/watchHistory.route.js"
 export const app = express();
 
 // CORS setup
+const allowedOrigins = [
+  "http://localhost:5600",                  // dev frontend
+  "https://vtube-production.up.railway.app" // production frontend
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5600", // React frontend URL
-    credentials: true,
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true, // allow cookies
   })
 );
+
 
 // Cookie parser
 app.use(cookieParser());
