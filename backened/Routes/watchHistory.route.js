@@ -5,7 +5,8 @@ import { addWatchHistory,getWatchHistory,deleteWatchHistory } from '../Controler
 const router=express.Router();
 
 router.get("/user",jwtVerify,getWatchHistory);
-router.post("user/:videoId",jwtVerify,addWatchHistory);
-router.delete("user/:videoId/:deleieType",jwtVerify,deleteWatchHistory)
+router.post("/user/:videoId", jwtVerify, addWatchHistory);
+router.delete("/user/delete/:videoId/:deleteType", jwtVerify, deleteWatchHistory);
+router.delete("/user/delete", jwtVerify, deleteWatchHistory);
 
 export default router
