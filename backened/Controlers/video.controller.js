@@ -5,6 +5,8 @@ import { uploadToCloudinary } from "../Utils/cloudinaryService.js";
 import { deleteFromCloudinary } from "../Utils/cloudinaryService.js";
 import { ApiResponse } from "../Utils/ApiResponse.js";
 import fs from "fs";
+import os from "os";
+console.log(os)
 import mongoose from "mongoose";
 
 
@@ -187,39 +189,41 @@ export const updateVideo = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200,updateVideo,"message video updated successfully"));
 });
 
-
 export const getUserVideos = asyncHandler(async (req, res) => {
-  const userId = new mongoose.Types.ObjectId(req.user._id || req.params?.id);
+  const { id } = req.params;
+
+  const userId = id || req?.user?.id;
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user ID format");
+  }
+
+  const objectId = new mongoose.Types.ObjectId(userId);
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
 
+  // ✅ pehle total videos count nikal lo
+  const totalVideos = await Video.countDocuments({ owner: objectId });
+
+  // ✅ aggregation for paginated data
   const userVideos = await Video.aggregate([
-    { $match: { owner: userId } },
-    { $sort: { createdAt: -1 } }, // latest videos first
+    { $match: { owner: objectId } },
+    { $sort: { createdAt: -1 } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
 
-    // bring owner minimal info
     {
       $lookup: {
         from: "users",
         localField: "owner",
         foreignField: "_id",
-        as: "ownerDetails"
+        as: "ownerDetails",
+        pipeline: [
+          { $project: { _id: 1, userName: 1, "avatar.url": 1 } }
+        ]
       }
     },
     { $unwind: "$ownerDetails" },
-    {
-      $addFields: {
-        ownerDetails: {
-          _id: "$ownerDetails._id",
-          userName: "$ownerDetails.userName",
-          avatar: "$ownerDetails.avatar.url"
-        }
-      }
-    },
 
-    // bring comments (latest 10)
     {
       $lookup: {
         from: "comments",
@@ -233,7 +237,10 @@ export const getUserVideos = asyncHandler(async (req, res) => {
               from: "users",
               localField: "user",
               foreignField: "_id",
-              as: "userDetails"
+              as: "userDetails",
+              pipeline: [
+                { $project: { userName: 1, "avatar.url": 1 } }
+              ]
             }
           },
           { $unwind: "$userDetails" },
@@ -253,7 +260,6 @@ export const getUserVideos = asyncHandler(async (req, res) => {
       }
     },
 
-    // final projection
     {
       $project: {
         _id: 1,
@@ -269,19 +275,20 @@ export const getUserVideos = asyncHandler(async (req, res) => {
     }
   ]);
 
-  if (!userVideos || userVideos.length === 0) {
-    throw new ApiError(404, "User or videos not found");
-  }
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { count: userVideos.length, videos: userVideos },
-        "User videos fetched successfully"
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        count: userVideos.length,
+        totalVideos,
+        totalPages: Math.ceil(totalVideos / limit),
+        page,
+        limit,
+        videos: userVideos
+      },
+      "User videos fetched successfully"
+    )
+  );
 });
 
 
