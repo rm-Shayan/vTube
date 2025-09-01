@@ -163,21 +163,26 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   // Web: return tokens in cookies
+
 const isProduction = process.env.NODE_ENV === "production";
 
 const accessTokenOptions = {
   httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
-  maxAge: 15 * 60 * 1000,
+  secure: isProduction,               // Local: false, Production: true
+  sameSite: isProduction ? "none" : "lax", // Local: lax, Production: none
+  maxAge: 15 * 60 * 1000,             // 15 min
+  path: "/",                          // Always set path
 };
 
 const refreshTokenOptions = {
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? "none" : "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  maxAge: 7 * 24 * 60 * 60 * 1000,    // 7 days
+  path: "/",
 };
+
+
 
   res.cookie("accessToken", accessToken, accessTokenOptions);
   res.cookie("refreshToken", refreshToken, refreshTokenOptions);
@@ -239,24 +244,22 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } =
       await generateAccessTokenAndRefreshToken(user._id);
 
-    
- const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env.NODE_ENV === "production";
 
-  // Cookie options
-  const accessTokenOptions = {
-    httpOnly: true,
-    secure: isProduction,                  // prod: true, dev: false
-    sameSite: isProduction ? "none" : "lax",
-    maxAge: 15 * 60 * 1000,               // 15 minutes
-  };
+    // Cookie options
+    const accessTokenOptions = {
+      httpOnly: true,
+      secure: isProduction, // local me false
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 15 * 60 * 1000,
+    };
 
-  const refreshTokenOptions = {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,      // 7 days
-  };
-  
+    const refreshTokenOptions = {
+      httpOnly: true,
+      secure: isProduction, // local me false
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
     res
       .cookie("accessToken", accessToken, accessTokenOptions)
       .cookie("refreshToken", refreshToken, refreshTokenOptions)
@@ -633,4 +636,3 @@ export const getProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, account[0], "Profile fetched successfully"));
 });
-

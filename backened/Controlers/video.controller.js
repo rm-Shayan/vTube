@@ -112,6 +112,7 @@ export const getVideos = asyncHandler(async (req, res) => {
         description: 1,
         thumbnail: 1,
         videoFile: 1,
+        duration:1,
         views: 1,
         createdAt: 1,
         ownerDetails: {
@@ -267,6 +268,7 @@ export const getUserVideos = asyncHandler(async (req, res) => {
         description: 1,
         thumbnail: { url: "$thumbnail.url", type: "$thumbnail.type" },
         videoFile: { url: "$file.url", type: "$file.type" },
+        duration:1,
         views: 1,
         createdAt: 1,
         ownerDetails: 1,
