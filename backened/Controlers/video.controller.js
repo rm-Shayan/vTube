@@ -114,6 +114,8 @@ export const getVideos = asyncHandler(async (req, res) => {
         videoFile: 1,
         duration:1,
         views: 1,
+        likes:1,
+        dislikes:1,
         createdAt: 1,
         ownerDetails: {
           _id: "$ownerDetails._id",
@@ -270,6 +272,8 @@ export const getUserVideos = asyncHandler(async (req, res) => {
         videoFile: { url: "$file.url", type: "$file.type" },
         duration:1,
         views: 1,
+        likes:1,
+        dislikes:1,
         createdAt: 1,
         ownerDetails: 1,
         comments: 1
