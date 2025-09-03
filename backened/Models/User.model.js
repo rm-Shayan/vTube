@@ -81,12 +81,6 @@ coverImage: {
       default: false,
       index: true,
     },
-    watchHistory: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "WatchHistory",
-      },
-    ],
     refreshToken: {
       type: String,
       select: false, // for security
@@ -98,10 +92,6 @@ coverImage: {
 
 //
 // 🔐 Hash password before save
-
-//
-userSchema.index({ followers: 1 });
-userSchema.index({ following: 1 });
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next(); // agar password change nahi hua toh skip

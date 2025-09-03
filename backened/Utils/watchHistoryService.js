@@ -3,23 +3,29 @@ import  {WatchHistory}  from "../Models/watchHistory.model.js";
 import { ApiError } from "./ApiError.js";
 
 // Add a video to watch history
+import mongoose from "mongoose";
+
 export const addWatchHistoryService = async (userId, videoId) => {
   if (!videoId) throw new ApiError(400, "Video ID is required");
 
+  // ensure ObjectId
+  const uId = new mongoose.Types.ObjectId(userId);
+  const vId = new mongoose.Types.ObjectId(videoId);
+
   // Check if video already exists
-  let history = await WatchHistory.findOne({ user: userId, video: videoId });
+  let history = await WatchHistory.findOne({ user: uId, video: vId });
   let isNew = false;
 
   if (!history) {
-    history = await WatchHistory.create({ user: userId, video: videoId });
+    history = await WatchHistory.create({ user: uId, video: vId });
     isNew = true;
   }
 
-  // Optional: remove history older than 24 hours
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  await WatchHistory.deleteMany({ user: userId, createdAt: { $lt: twentyFourHoursAgo } });
+  // ✅ optional cleanup (sirf tab rakhna agar tumhe time-limit chahiye)
+  // const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // await WatchHistory.deleteMany({ user: uId, createdAt: { $lt: twentyFourHoursAgo } });
 
-  return { ...history.toObject(), isNew };
+  return { isNew, history };
 };
 
 // Get last 24 hours watch history
