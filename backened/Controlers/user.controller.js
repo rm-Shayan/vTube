@@ -535,7 +535,7 @@ export const getProfile = asyncHandler(async (req, res) => {
     req.body?.accountName ||
     req.query?.accountName ||
     req.params?.accountName ||
-    req.user?.userName; // fallback to logged-in user
+    req?.user?.userName; // fallback to logged-in user
 
   if (!accountName) {
     throw new ApiError(400, "Account name is required");
