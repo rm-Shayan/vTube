@@ -267,10 +267,6 @@ export const getUserVideos = asyncHandler(async (req, res) => {
           url: { $ifNull: ["$thumbnail.url", null] },
           type: { $ifNull: ["$thumbnail.type", null] },
         },
-        videoFile: {
-          url: { $ifNull: ["$file.url", null] },
-          type: { $ifNull: ["$file.type", null] },
-        },
         duration: 1,
         createdAt: 1,
         ownerDetails: 1,
