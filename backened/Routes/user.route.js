@@ -45,8 +45,7 @@ router.patch(
 );
 
 // Profile
-router.get("/profile/:accountName", jwtVerify, getProfile);
-
+router.get("/profile/:accountName", getProfile);
 // If no accountName → fallback to logged in user
-router.get("/profile", jwtVerify, getProfile);
+router.get("/profile", getProfile);
 export default router;

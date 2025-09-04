@@ -22,8 +22,8 @@ route.get("/", getVideos);
 //secure routes
 
 // Get User's Videos
-route.get("/user", jwtVerify, getUserVideos);
-route.get("/user/:id", jwtVerify, getUserVideos);
+route.get("/user",  getUserVideos);
+route.get("/user/:id", getUserVideos);
 
 // Upload Video
 route.post("/user/upload", jwtVerify, uploadVideoMedia, uploadVideo);
