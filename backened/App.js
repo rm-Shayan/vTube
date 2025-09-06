@@ -13,7 +13,8 @@ export const app = express();
 // CORS setup
 const allowedOrigins = [
   "http://localhost:5600",                  // dev frontend
-  "https://vtube-production.up.railway.app" // production frontend
+  "https://vtube-production.up.railway.app", // production frontend
+  "http://localhost:5173"
 ];
 
 app.use(
